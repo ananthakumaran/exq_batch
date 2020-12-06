@@ -20,7 +20,7 @@ local batch_jobs_key = KEYS[5]
 local batch_successful_jobs_key = KEYS[6]
 local batch_dead_jobs_key = KEYS[7]
 local jid_to_batch_id_key = KEYS[8]
-local callback_job_enqueued_at, jid, status = ARGV[1], ARGV[2], ARGV[3]
+local callback_job_enqueued_at, jid, status, ttl = ARGV[1], ARGV[2], ARGV[3], ARGV[4]
 
 redis.call('DEL', jid_to_batch_id_key)
 if redis.call('SISMEMBER', batch_jobs_key, jid) == 0 then
@@ -29,8 +29,10 @@ end
 
 if status == 'success' then
    redis.call('SADD', batch_successful_jobs_key, jid)
+   redis.call('EXPIRE', batch_successful_jobs_key, ttl)
 elseif status == 'dead' then
    redis.call('SADD', batch_dead_jobs_key, jid)
+   redis.call('EXPIRE', batch_dead_jobs_key, ttl)
 end
 local state = redis.call('GET', batch_state_key)
 if state == 'initialized' then

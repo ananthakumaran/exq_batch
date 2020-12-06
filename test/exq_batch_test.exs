@@ -51,6 +51,7 @@ defmodule ExqBatchTest do
     assert_receive "complete", 1000
 
     assert [] == Redix.command!(redix, ["KEYS", "exq_batch:*"])
+    refute_receive _, 1000
   end
 
   test "some jobs failed", %{redix: redix} do
@@ -69,6 +70,7 @@ defmodule ExqBatchTest do
     assert_receive "complete", 1000
 
     assert [] == Redix.command!(redix, ["KEYS", "exq_batch:*"])
+    refute_receive _, 1000
   end
 
   test "all jobs completed before create", %{redix: redix} do
@@ -88,6 +90,7 @@ defmodule ExqBatchTest do
     assert_receive "complete", 1000
 
     assert [] == Redix.command!(redix, ["KEYS", "exq_batch:*"])
+    refute_receive _, 1000
   end
 
   test "idempotent batch creation", %{redix: redix} do
@@ -118,8 +121,31 @@ defmodule ExqBatchTest do
     assert_receive 1, 1000
     assert_receive 2, 1000
     assert_receive "complete", 1000
-    refute_receive _, 1000
 
     assert [] == Redix.command!(redix, ["KEYS", "exq_batch:*"])
+    refute_receive _, 1000
+  end
+
+  test "batch expires after ttl", %{redix: redix} do
+    {:ok, batch} =
+      ExqBatch.new(on_complete: %{queue: "default", class: CompletionWorker, args: ["complete"]})
+
+    {:ok, jid} = Exq.enqueue(Exq, "default", SuccessWorker, [1])
+    {:ok, batch} = ExqBatch.add(batch, jid)
+    {:ok, jid} = Exq.enqueue(Exq, "unknown", SuccessWorker, [2])
+    {:ok, batch} = ExqBatch.add(batch, jid)
+    {:ok, jid} = Exq.enqueue(Exq, "default", FailureWorker, [3])
+    {:ok, batch} = ExqBatch.add(batch, jid)
+    {:ok, _batch} = ExqBatch.create(batch)
+
+    assert_receive 1, 1000
+    assert_receive 3, 1000
+    assert_receive 3, 1000
+    refute_receive 2, 1000
+    refute_receive "complete", 1000
+
+    Process.sleep(5000)
+    assert [] == Redix.command!(redix, ["KEYS", "exq_batch:*"])
+    refute_receive _, 1000
   end
 end

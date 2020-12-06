@@ -86,7 +86,8 @@ defmodule ExqBatch.Internal do
     ]
 
     args = [
-      Utils.unix_seconds()
+      Utils.unix_seconds(),
+      batch.ttl
     ]
 
     Script.eval(batch.redis, @create, keys, args)
@@ -136,7 +137,8 @@ defmodule ExqBatch.Internal do
     args = [
       Utils.unix_seconds(),
       jid,
-      status
+      status,
+      batch.ttl
     ]
 
     {:ok, 0} = Script.eval(batch.redis, @complete, keys, args)

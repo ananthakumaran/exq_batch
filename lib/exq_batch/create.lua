@@ -19,7 +19,7 @@ local batch_on_complete_key = KEYS[4]
 local batch_jobs_key = KEYS[5]
 local batch_successful_jobs_key = KEYS[6]
 local batch_dead_jobs_key = KEYS[7]
-local callback_job_enqueued_at = ARGV[1]
+local callback_job_enqueued_at, ttl = ARGV[1], ARGV[2]
 
 local total_jobs_count = redis.call('SCARD', batch_jobs_key)
 local successful_jobs_count = redis.call('SCARD', batch_successful_jobs_key)
@@ -35,7 +35,7 @@ if total_jobs_count == successful_jobs_count + dead_jobs_count then
 
    redis.call('DEL', batch_state_key, batch_on_complete_key, batch_jobs_key, batch_successful_jobs_key, batch_dead_jobs_key)
 else
-   redis.call('SET', batch_state_key, 'created')
+   redis.call('SETEX', batch_state_key, ttl, 'created')
 end
 
 return 0
