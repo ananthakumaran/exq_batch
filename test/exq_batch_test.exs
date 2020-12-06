@@ -23,8 +23,8 @@ defmodule ExqBatchTest do
   end
 
   defmodule CompletionWorker do
-    def perform(id) do
-      send(:runner, id)
+    def perform(id, status) do
+      send(:runner, {id, status})
       :ok
     end
   end
@@ -48,7 +48,7 @@ defmodule ExqBatchTest do
 
     assert_receive 1, 1000
     assert_receive 2, 1000
-    assert_receive "complete", 1000
+    assert_receive {"complete", %{"succeeded" => [_, _]}}, 1000
 
     assert [] == Redix.command!(redix, ["KEYS", "exq_batch:*"])
     refute_receive _, 1000
@@ -67,7 +67,7 @@ defmodule ExqBatchTest do
     assert_receive 1, 1000
     assert_receive 2, 1000
     assert_receive 2, 1000
-    assert_receive "complete", 1000
+    assert_receive {"complete", %{"succeeded" => [_], "dead" => [_]}}, 1000
 
     assert [] == Redix.command!(redix, ["KEYS", "exq_batch:*"])
     refute_receive _, 1000
@@ -84,10 +84,10 @@ defmodule ExqBatchTest do
 
     assert_receive 1, 1000
     assert_receive 2, 1000
-    refute_receive "complete", 1000
+    refute_receive {"complete", _}, 1000
 
     {:ok, _batch} = ExqBatch.create(batch)
-    assert_receive "complete", 1000
+    assert_receive {"complete", %{"succeeded" => [_, _]}}, 1000
 
     assert [] == Redix.command!(redix, ["KEYS", "exq_batch:*"])
     refute_receive _, 1000
@@ -120,7 +120,7 @@ defmodule ExqBatchTest do
     assert_receive 1, 1000
     assert_receive 1, 1000
     assert_receive 2, 1000
-    assert_receive "complete", 1000
+    assert_receive {"complete", %{"succeeded" => [_, _]}}, 1000
 
     assert [] == Redix.command!(redix, ["KEYS", "exq_batch:*"])
     refute_receive _, 1000
@@ -142,7 +142,7 @@ defmodule ExqBatchTest do
     assert_receive 3, 1000
     assert_receive 3, 1000
     refute_receive 2, 1000
-    refute_receive "complete", 1000
+    refute_receive {"complete", _}, 1000
 
     Process.sleep(5000)
     assert [] == Redix.command!(redix, ["KEYS", "exq_batch:*"])
