@@ -85,7 +85,40 @@ defmodule ExqBatchTest do
     refute_receive "complete", 1000
 
     {:ok, _batch} = ExqBatch.create(batch)
-    assert_receive "complete"
+    assert_receive "complete", 1000
+
+    assert [] == Redix.command!(redix, ["KEYS", "exq_batch:*"])
+  end
+
+  test "idempotent batch creation", %{redix: redix} do
+    id = UUID.uuid4()
+
+    {:ok, batch} =
+      ExqBatch.new(
+        id: id,
+        on_complete: %{queue: "default", class: CompletionWorker, args: ["complete"]}
+      )
+
+    {:ok, jid} = Exq.enqueue(Exq, "default", SuccessWorker, [1])
+    {:ok, _batch} = ExqBatch.add(batch, jid)
+
+    {:ok, batch} =
+      ExqBatch.new(
+        id: id,
+        on_complete: %{queue: "default", class: CompletionWorker, args: ["complete"]}
+      )
+
+    {:ok, jid} = Exq.enqueue(Exq, "default", SuccessWorker, [1])
+    {:ok, batch} = ExqBatch.add(batch, jid)
+    {:ok, jid} = Exq.enqueue(Exq, "default", SuccessWorker, [2])
+    {:ok, batch} = ExqBatch.add(batch, jid)
+    {:ok, _batch} = ExqBatch.create(batch)
+
+    assert_receive 1, 1000
+    assert_receive 1, 1000
+    assert_receive 2, 1000
+    assert_receive "complete", 1000
+    refute_receive _, 1000
 
     assert [] == Redix.command!(redix, ["KEYS", "exq_batch:*"])
   end

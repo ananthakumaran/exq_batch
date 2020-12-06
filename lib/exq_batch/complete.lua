@@ -22,14 +22,16 @@ local batch_dead_jobs_key = KEYS[7]
 local jid_to_batch_id_key = KEYS[8]
 local callback_job_enqueued_at, jid, status = ARGV[1], ARGV[2], ARGV[3]
 
+redis.call('DEL', jid_to_batch_id_key)
+if redis.call('SISMEMBER', batch_jobs_key, jid) == 0 then
+   return 0
+end
+
 if status == 'success' then
    redis.call('SADD', batch_successful_jobs_key, jid)
 elseif status == 'dead' then
    redis.call('SADD', batch_dead_jobs_key, jid)
 end
-
-redis.call('DEL', jid_to_batch_id_key)
-
 local state = redis.call('GET', batch_state_key)
 if state == 'initialized' then
    return 0
