@@ -127,25 +127,40 @@ defmodule ExqBatchTest do
   end
 
   test "batch expires after ttl", %{redix: redix} do
-    {:ok, batch} =
-      ExqBatch.new(on_complete: %{queue: "default", class: CompletionWorker, args: ["complete"]})
+    with_application_env(:exq_batch, :ttl_in_seconds, 5, fn ->
+      {:ok, batch} =
+        ExqBatch.new(
+          on_complete: %{queue: "default", class: CompletionWorker, args: ["complete"]}
+        )
 
-    {:ok, jid} = Exq.enqueue(Exq, "default", SuccessWorker, [1])
-    {:ok, batch} = ExqBatch.add(batch, jid)
-    {:ok, jid} = Exq.enqueue(Exq, "unknown", SuccessWorker, [2])
-    {:ok, batch} = ExqBatch.add(batch, jid)
-    {:ok, jid} = Exq.enqueue(Exq, "default", FailureWorker, [3])
-    {:ok, batch} = ExqBatch.add(batch, jid)
-    {:ok, _batch} = ExqBatch.create(batch)
+      {:ok, jid} = Exq.enqueue(Exq, "default", SuccessWorker, [1])
+      {:ok, batch} = ExqBatch.add(batch, jid)
+      {:ok, jid} = Exq.enqueue(Exq, "unknown", SuccessWorker, [2])
+      {:ok, batch} = ExqBatch.add(batch, jid)
+      {:ok, jid} = Exq.enqueue(Exq, "default", FailureWorker, [3])
+      {:ok, batch} = ExqBatch.add(batch, jid)
+      {:ok, _batch} = ExqBatch.create(batch)
 
-    assert_receive 1, 1000
-    assert_receive 3, 1000
-    assert_receive 3, 1000
-    refute_receive 2, 1000
-    refute_receive {"complete", _}, 1000
+      assert_receive 1, 1000
+      assert_receive 3, 1000
+      assert_receive 3, 1000
+      refute_receive 2, 1000
+      refute_receive {"complete", _}, 1000
 
-    Process.sleep(5000)
-    assert [] == Redix.command!(redix, ["KEYS", "exq_batch:*"])
-    refute_receive _, 1000
+      Process.sleep(5000)
+      assert [] == Redix.command!(redix, ["KEYS", "exq_batch:*"])
+      refute_receive _, 1000
+    end)
+  end
+
+  def with_application_env(app, key, new, context) do
+    old = Application.get_env(app, key)
+    Application.put_env(app, key, new)
+
+    try do
+      context.()
+    after
+      Application.put_env(app, key, old)
+    end
   end
 end

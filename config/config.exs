@@ -14,4 +14,4 @@ config :exq,
   scheduler_pool_timeout: 10
 
 config :exq_batch,
-  ttl_in_seconds: 5
+  ttl_in_seconds: 60 * 5
