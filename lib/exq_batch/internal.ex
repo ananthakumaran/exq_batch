@@ -129,7 +129,8 @@ defmodule ExqBatch.Internal do
       batch.prefix <> batch.id <> @on_complete,
       batch.prefix <> batch.id <> @jobs,
       batch.prefix <> batch.id <> @successful_jobs,
-      batch.prefix <> batch.id <> @dead_jobs
+      batch.prefix <> batch.id <> @dead_jobs,
+      batch.prefix <> jid <> @jid_to_batch_id
     ]
 
     args = [

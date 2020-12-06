@@ -33,10 +33,10 @@ defmodule ExqBatchTest do
     {:ok, redix} = Redix.start_link()
     "OK" = Redix.command!(redix, ["FLUSHALL"])
     Process.register(self(), :runner)
-    :ok
+    %{redix: redix}
   end
 
-  test "all jobs succeeded" do
+  test "all jobs succeeded", %{redix: redix} do
     {:ok, batch} =
       ExqBatch.new(on_complete: %{queue: "default", class: CompletionWorker, args: ["complete"]})
 
@@ -46,12 +46,14 @@ defmodule ExqBatchTest do
     {:ok, batch} = ExqBatch.add(batch, jid)
     {:ok, _batch} = ExqBatch.create(batch)
 
-    assert_receive 1
-    assert_receive 2
-    assert_receive "complete"
+    assert_receive 1, 1000
+    assert_receive 2, 1000
+    assert_receive "complete", 1000
+
+    assert [] == Redix.command!(redix, ["KEYS", "exq_batch:*"])
   end
 
-  test "some jobs failed" do
+  test "some jobs failed", %{redix: redix} do
     {:ok, batch} =
       ExqBatch.new(on_complete: %{queue: "default", class: CompletionWorker, args: ["complete"]})
 
@@ -61,13 +63,15 @@ defmodule ExqBatchTest do
     {:ok, batch} = ExqBatch.add(batch, jid)
     {:ok, _batch} = ExqBatch.create(batch)
 
-    assert_receive 1
-    assert_receive 2
-    assert_receive 2
-    assert_receive "complete"
+    assert_receive 1, 1000
+    assert_receive 2, 1000
+    assert_receive 2, 1000
+    assert_receive "complete", 1000
+
+    assert [] == Redix.command!(redix, ["KEYS", "exq_batch:*"])
   end
 
-  test "all jobs completed before create" do
+  test "all jobs completed before create", %{redix: redix} do
     {:ok, batch} =
       ExqBatch.new(on_complete: %{queue: "default", class: CompletionWorker, args: ["complete"]})
 
@@ -76,11 +80,13 @@ defmodule ExqBatchTest do
     {:ok, jid} = Exq.enqueue(Exq, "default", SuccessWorker, [2])
     {:ok, batch} = ExqBatch.add(batch, jid)
 
-    assert_receive 1
-    assert_receive 2
-    refute_receive "complete"
+    assert_receive 1, 1000
+    assert_receive 2, 1000
+    refute_receive "complete", 1000
 
     {:ok, _batch} = ExqBatch.create(batch)
     assert_receive "complete"
+
+    assert [] == Redix.command!(redix, ["KEYS", "exq_batch:*"])
   end
 end

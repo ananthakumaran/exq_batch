@@ -12,7 +12,13 @@ local hgetall = function (key)
    return result
 end
 
-local queues_key, callback_job_queue_key, batch_state_key, batch_on_complete_key, batch_jobs_key, batch_successful_jobs_key, batch_dead_jobs_key = KEYS[1], KEYS[2], KEYS[3], KEYS[4], KEYS[5], KEYS[6], KEYS[7]
+local queues_key = KEYS[1]
+local callback_job_queue_key = KEYS[2]
+local batch_state_key = KEYS[3]
+local batch_on_complete_key = KEYS[4]
+local batch_jobs_key = KEYS[5]
+local batch_successful_jobs_key = KEYS[6]
+local batch_dead_jobs_key = KEYS[7]
 local callback_job_enqueued_at = ARGV[1]
 
 local total_jobs_count = redis.call('SCARD', batch_jobs_key)
