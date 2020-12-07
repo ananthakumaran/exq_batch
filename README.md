@@ -29,10 +29,21 @@ config :exq,
 ```
 
 `ExqBatch.Middleware` middleware **must** be added before the
-`Exq.Middleware.Job` middleware.
+`Exq.Middleware.Job` middleware. The middleware is used to track job
+life cycle.
 
 ```elixir
 config :exq_batch,
   ttl_in_seconds: 60 * 60 * 24 * 30,
   prefix: "exq_batch"
 ```
+
+## Caveats
+
+* The completion job will get enqueued only once after all the jobs in
+  a group is either done or dead. A Resurrected job does not belong to
+  the batch and will not lead to creation of completion job.
+
+* All the jobs in batch **must** be allowed to be complete (either
+  dead or done). Deleting any jobs while they are in retry queue will
+  cause the batch to get stuck and will expire eventually.
