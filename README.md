@@ -7,7 +7,7 @@ job when all the jobs are processed.
 ## Example
 
 ```elixir
-{:ok, batch} = ExqBatch.new(on_complete: %{queue: "default", class: CompletionWorker, args: ["complete"]})
+{:ok, batch} = ExqBatch.new(on_complete: [queue: "default", class: CompletionWorker, args: ["complete"]])
 {:ok, jid} = Exq.enqueue(Exq, "default", Worker, [1])
 {:ok, batch} = ExqBatch.add(batch, jid)
 {:ok, jid} = Exq.enqueue(Exq, "default", Worker, [2])

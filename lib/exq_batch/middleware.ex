@@ -1,4 +1,9 @@
 defmodule ExqBatch.Middleware do
+  @moduledoc """
+  Monitors job life cycle and creates completion job when all job in a
+  batch is done.
+  """
+
   @behaviour Exq.Middleware.Behaviour
   alias Exq.Middleware.Pipeline
   alias ExqBatch.Utils

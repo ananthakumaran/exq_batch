@@ -24,7 +24,9 @@ defmodule ExqBatch.MixProject do
       {:elixir_uuid, "~> 1.2"},
       {:redix, ">= 0.9.0"},
       {:telemetry, "~> 0.4"},
-      {:jason, "~> 1.0"}
+      {:jason, "~> 1.0"},
+      {:dialyxir, "~> 1.0", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.22.0", only: :dev, runtime: false}
     ]
   end
 end

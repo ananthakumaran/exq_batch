@@ -38,7 +38,7 @@ defmodule ExqBatchTest do
 
   test "all jobs succeeded", %{redix: redix} do
     {:ok, batch} =
-      ExqBatch.new(on_complete: %{queue: "default", class: CompletionWorker, args: ["complete"]})
+      ExqBatch.new(on_complete: [queue: "default", class: CompletionWorker, args: ["complete"]])
 
     {:ok, jid} = Exq.enqueue(Exq, "default", SuccessWorker, [1])
     {:ok, batch} = ExqBatch.add(batch, jid)
@@ -56,7 +56,7 @@ defmodule ExqBatchTest do
 
   test "some jobs failed", %{redix: redix} do
     {:ok, batch} =
-      ExqBatch.new(on_complete: %{queue: "default", class: CompletionWorker, args: ["complete"]})
+      ExqBatch.new(on_complete: [queue: "default", class: CompletionWorker, args: ["complete"]])
 
     {:ok, jid} = Exq.enqueue(Exq, "default", SuccessWorker, [1])
     {:ok, batch} = ExqBatch.add(batch, jid)
@@ -75,7 +75,7 @@ defmodule ExqBatchTest do
 
   test "all jobs completed before create", %{redix: redix} do
     {:ok, batch} =
-      ExqBatch.new(on_complete: %{queue: "default", class: CompletionWorker, args: ["complete"]})
+      ExqBatch.new(on_complete: [queue: "default", class: CompletionWorker, args: ["complete"]])
 
     {:ok, jid} = Exq.enqueue(Exq, "default", SuccessWorker, [1])
     {:ok, batch} = ExqBatch.add(batch, jid)
@@ -99,7 +99,7 @@ defmodule ExqBatchTest do
     {:ok, batch} =
       ExqBatch.new(
         id: id,
-        on_complete: %{queue: "default", class: CompletionWorker, args: ["complete"]}
+        on_complete: [queue: "default", class: CompletionWorker, args: ["complete"]]
       )
 
     {:ok, jid} = Exq.enqueue(Exq, "default", SuccessWorker, [1])
@@ -108,7 +108,7 @@ defmodule ExqBatchTest do
     {:ok, batch} =
       ExqBatch.new(
         id: id,
-        on_complete: %{queue: "default", class: CompletionWorker, args: ["complete"]}
+        on_complete: [queue: "default", class: CompletionWorker, args: ["complete"]]
       )
 
     {:ok, jid} = Exq.enqueue(Exq, "default", SuccessWorker, [1])
@@ -129,9 +129,7 @@ defmodule ExqBatchTest do
   test "batch expires after ttl", %{redix: redix} do
     with_application_env(:exq_batch, :ttl_in_seconds, 5, fn ->
       {:ok, batch} =
-        ExqBatch.new(
-          on_complete: %{queue: "default", class: CompletionWorker, args: ["complete"]}
-        )
+        ExqBatch.new(on_complete: [queue: "default", class: CompletionWorker, args: ["complete"]])
 
       {:ok, jid} = Exq.enqueue(Exq, "default", SuccessWorker, [1])
       {:ok, batch} = ExqBatch.add(batch, jid)

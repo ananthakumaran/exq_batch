@@ -1,4 +1,6 @@
 defmodule ExqBatch.Utils do
+  @moduledoc false
+
   def max_retries do
     :max_retries
     |> Exq.Support.Config.get()
