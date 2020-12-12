@@ -13,7 +13,7 @@ defmodule ExqBatch.Internal do
   @jid_to_batch_id ":j"
 
   def init(batch) do
-    {args, on_complete} = Map.pop!(batch.on_complete, :args)
+    {args, on_complete} = Map.pop(batch.on_complete, :args)
 
     on_complete_kvs = [
       "args",
