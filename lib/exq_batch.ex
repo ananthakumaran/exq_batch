@@ -15,6 +15,8 @@ defmodule ExqBatch do
   @doc """
   Initialize a new batch.
 
+  on\_complete job will receive an extra arg which includes the list of dead and succeeded jids. Example `%{"dead" => [], "succeeded" => [jid1, jid2]}`
+
   ### Options
 
   * on\_complete (keyword) *required* - A Keyword list that specifies the details of job that will get enqueued on when all the jobs in a batch get completed

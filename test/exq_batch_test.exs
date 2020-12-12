@@ -144,6 +144,28 @@ defmodule ExqBatchTest do
     end)
   end
 
+  test "encodes args correctly", %{redix: redix} do
+    {:ok, batch} =
+      ExqBatch.new(
+        on_complete: [queue: "default", class: CompletionWorker, args: [["complete", []]]]
+      )
+
+    {:ok, batch, _jid} =
+      ExqBatch.add(batch, queue: "default", class: SuccessWorker, args: [[[], %{}, 1]])
+
+    {:ok, batch, _jid} =
+      ExqBatch.add(batch, queue: "default", class: SuccessWorker, args: [[%{}, [], 2]])
+
+    {:ok, _batch} = ExqBatch.create(batch)
+
+    assert_receive [[], %{}, 1], 1000
+    assert_receive [%{}, [], 2], 1000
+    assert_receive {["complete", []], %{"succeeded" => [_, _]}}, 1000
+
+    assert [] == Redix.command!(redix, ["KEYS", "exq_batch:*"])
+    refute_receive _, 1000
+  end
+
   def with_application_env(app, key, new, context) do
     old = Application.get_env(app, key)
     Application.put_env(app, key, new)
