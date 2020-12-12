@@ -8,10 +8,17 @@ defmodule ExqBatch.MixProject do
       elixir: "~> 1.8",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
+      description: "Monitors group of Exq jobs",
       docs: [
         main: "readme",
         extras: ["README.md"]
-      ]
+      ],
+      package: %{
+        licenses: ["MIT"],
+        links: %{"Github" => "https://github.com/ananthakumaran/exq_batch"},
+        maintainers: ["ananthakumaran@gmail.com"]
+      },
+      source_url: "https://github.com/ananthakumaran/exq_batch"
     ]
   end
 
