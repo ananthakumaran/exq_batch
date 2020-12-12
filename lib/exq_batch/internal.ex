@@ -13,10 +13,9 @@ defmodule ExqBatch.Internal do
   @jid_to_batch_id ":j"
 
   def init(batch) do
-    batch = update_in(batch.on_complete.args, &Jason.encode!(&1))
-
     on_complete_kvs =
-      Enum.flat_map(batch.on_complete, fn {key, value} -> [to_string(key), to_string(value)] end)
+      Map.update!(batch.on_complete, :args, &Jason.encode!(&1))
+      |> Enum.flat_map(fn {key, value} -> [to_string(key), to_string(value)] end)
 
     commands = [
       ["MULTI"],
