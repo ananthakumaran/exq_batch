@@ -40,10 +40,8 @@ defmodule ExqBatchTest do
     {:ok, batch} =
       ExqBatch.new(on_complete: [queue: "default", class: CompletionWorker, args: ["complete"]])
 
-    {:ok, jid} = Exq.enqueue(Exq, "default", SuccessWorker, [1])
-    {:ok, batch} = ExqBatch.add(batch, jid)
-    {:ok, jid} = Exq.enqueue(Exq, "default", SuccessWorker, [2])
-    {:ok, batch} = ExqBatch.add(batch, jid)
+    {:ok, batch, _jid} = ExqBatch.add(batch, queue: "default", class: SuccessWorker, args: [1])
+    {:ok, batch, _jid} = ExqBatch.add(batch, queue: "default", class: SuccessWorker, args: [2])
     {:ok, _batch} = ExqBatch.create(batch)
 
     assert_receive 1, 1000
@@ -58,10 +56,13 @@ defmodule ExqBatchTest do
     {:ok, batch} =
       ExqBatch.new(on_complete: [queue: "default", class: CompletionWorker, args: ["complete"]])
 
-    {:ok, jid} = Exq.enqueue(Exq, "default", SuccessWorker, [1])
-    {:ok, batch} = ExqBatch.add(batch, jid)
-    {:ok, jid} = Exq.enqueue(Exq, "default", FailureWorker, [2])
-    {:ok, batch} = ExqBatch.add(batch, jid)
+    jid = UUID.uuid4()
+    {:ok, batch, ^jid} = ExqBatch.add(batch, jid)
+    {:ok, ^jid} = Exq.enqueue(Exq, "default", SuccessWorker, [1], jid: jid)
+
+    jid = UUID.uuid4()
+    {:ok, batch, ^jid} = ExqBatch.add(batch, jid)
+    {:ok, ^jid} = Exq.enqueue(Exq, "default", FailureWorker, [2], jid: jid)
     {:ok, _batch} = ExqBatch.create(batch)
 
     assert_receive 1, 1000
@@ -77,10 +78,8 @@ defmodule ExqBatchTest do
     {:ok, batch} =
       ExqBatch.new(on_complete: [queue: "default", class: CompletionWorker, args: ["complete"]])
 
-    {:ok, jid} = Exq.enqueue(Exq, "default", SuccessWorker, [1])
-    {:ok, batch} = ExqBatch.add(batch, jid)
-    {:ok, jid} = Exq.enqueue(Exq, "default", SuccessWorker, [2])
-    {:ok, batch} = ExqBatch.add(batch, jid)
+    {:ok, batch, _jid} = ExqBatch.add(batch, queue: "default", class: SuccessWorker, args: [1])
+    {:ok, batch, _jid} = ExqBatch.add(batch, queue: "default", class: SuccessWorker, args: [2])
 
     assert_receive 1, 1000
     assert_receive 2, 1000
@@ -102,8 +101,7 @@ defmodule ExqBatchTest do
         on_complete: [queue: "default", class: CompletionWorker, args: ["complete"]]
       )
 
-    {:ok, jid} = Exq.enqueue(Exq, "default", SuccessWorker, [1])
-    {:ok, _batch} = ExqBatch.add(batch, jid)
+    {:ok, _batch, _jid} = ExqBatch.add(batch, queue: "default", class: SuccessWorker, args: [1])
 
     {:ok, batch} =
       ExqBatch.new(
@@ -111,10 +109,8 @@ defmodule ExqBatchTest do
         on_complete: [queue: "default", class: CompletionWorker, args: ["complete"]]
       )
 
-    {:ok, jid} = Exq.enqueue(Exq, "default", SuccessWorker, [1])
-    {:ok, batch} = ExqBatch.add(batch, jid)
-    {:ok, jid} = Exq.enqueue(Exq, "default", SuccessWorker, [2])
-    {:ok, batch} = ExqBatch.add(batch, jid)
+    {:ok, batch, _jid} = ExqBatch.add(batch, queue: "default", class: SuccessWorker, args: [1])
+    {:ok, batch, _jid} = ExqBatch.add(batch, queue: "default", class: SuccessWorker, args: [2])
     {:ok, _batch} = ExqBatch.create(batch)
 
     assert_receive 1, 1000
@@ -131,12 +127,9 @@ defmodule ExqBatchTest do
       {:ok, batch} =
         ExqBatch.new(on_complete: [queue: "default", class: CompletionWorker, args: ["complete"]])
 
-      {:ok, jid} = Exq.enqueue(Exq, "default", SuccessWorker, [1])
-      {:ok, batch} = ExqBatch.add(batch, jid)
-      {:ok, jid} = Exq.enqueue(Exq, "unknown", SuccessWorker, [2])
-      {:ok, batch} = ExqBatch.add(batch, jid)
-      {:ok, jid} = Exq.enqueue(Exq, "default", FailureWorker, [3])
-      {:ok, batch} = ExqBatch.add(batch, jid)
+      {:ok, batch, _jid} = ExqBatch.add(batch, queue: "default", class: SuccessWorker, args: [1])
+      {:ok, batch, _jid} = ExqBatch.add(batch, queue: "unknown", class: SuccessWorker, args: [2])
+      {:ok, batch, _jid} = ExqBatch.add(batch, queue: "default", class: FailureWorker, args: [3])
       {:ok, _batch} = ExqBatch.create(batch)
 
       assert_receive 1, 1000

@@ -1,17 +1,15 @@
 # ExqBatch
 
 ExqBatch provides a building block to create complex workflows using
-Exq jobs. A Batch monitors a group of Exq jobs and creates callback
+Exq jobs. A batch monitors a group of Exq jobs and creates callback
 job when all the jobs are processed.
 
 ## Example
 
 ```elixir
 {:ok, batch} = ExqBatch.new(on_complete: [queue: "default", class: CompletionWorker, args: ["complete"]])
-{:ok, jid} = Exq.enqueue(Exq, "default", Worker, [1])
-{:ok, batch} = ExqBatch.add(batch, jid)
-{:ok, jid} = Exq.enqueue(Exq, "default", Worker, [2])
-{:ok, batch} = ExqBatch.add(batch, jid)
+{:ok, batch, jid} = ExqBatch.add(batch, queue: "default", class: Worker, args: [1])
+{:ok, batch, jid} = ExqBatch.add(batch, queue: "default", class: Worker, args: [2])
 {:ok, _batch} = ExqBatch.create(batch)
 ```
 

@@ -4,7 +4,7 @@ defmodule ExqBatch do
 
   @moduledoc """
   ExqBatch provides a building block to create complex workflows using
-  Exq jobs. A Batch monitors a group of Exq jobs and creates callback
+  Exq jobs. A batch monitors a group of Exq jobs and creates callback
   job when all the jobs are processed.
   """
 
@@ -13,7 +13,7 @@ defmodule ExqBatch do
   @type t :: %__MODULE__{id: String.t()}
 
   @doc """
-  Initialize a new Batch.
+  Initialize a new batch.
 
   ### Options
 
@@ -21,7 +21,8 @@ defmodule ExqBatch do
     * queue (string) *required* - exq job queue
     * args (array) *required* - exq job args.
     * class (string) *required* - exq job class.
-    * retries (integer) - no of times the job should be retried
+    * retry (integer) - no of times the job should be retried.
+    * jid (string) - if not present, A UUID is used.
   * id (string) - A UUID is used by default. If same id is used for two batch jobs, the previous batch jobs will get cleared.
   """
   @spec new(Keyword.t()) :: {:ok, t} | {:error, term()}
@@ -31,21 +32,7 @@ defmodule ExqBatch do
 
     on_complete =
       Keyword.fetch!(options, :on_complete)
-      |> Keyword.put_new_lazy(:jid, fn -> UUID.uuid4() end)
-      |> Keyword.put_new_lazy(:retries, fn -> Utils.max_retries() end)
-      |> Keyword.update!(:args, fn args when is_list(args) ->
-        Jason.encode!(args)
-      end)
-      |> Keyword.update!(:class, fn
-        worker when is_atom(worker) ->
-          "Elixir." <> worker = to_string(worker)
-          worker
-
-        worker when is_binary(worker) ->
-          worker
-      end)
-      |> Keyword.update!(:queue, fn queue -> to_string(queue) end)
-      |> Enum.into(%{})
+      |> to_job()
 
     batch = %{batch | on_complete: on_complete}
 
@@ -55,12 +42,43 @@ defmodule ExqBatch do
   end
 
   @doc """
-  Add the jid to the given batch
+  Add a job to the given batch.
+
+  There are two ways to add a job to batch
+
+  1) Pass the job params and let ExqBatch enqueue the job. ExqBatch
+  will both enqueue the job and add it to the batch using a atomic
+  [MULTI EXEC](https://redis.io/topics/transactions) operation. Refer
+  the on\_complete option in `new/1` for job options.
+
+      ```
+      {:ok, batch, jid} = ExqBatch.add(batch, queue: "default", class: Worker, args: [1])
+      ```
+
+  2) Add a job using jid. Note that, the `add/2` should be called
+  **before** the job is enqueued. Otherwise, there is a potential race
+  condition where the job could finish before `add/2` is called and
+  would cause the batch to hang. Exq allows to specify the jid of the
+  job, so generate a jid first, then add it to the batch and after
+  that enqueue the job.
+
+      ```
+      jid = UUID.uuid4()
+      {:ok, batch, ^jid} = ExqBatch.add(batch, jid)
+      {:ok, ^jid} = Exq.enqueue(Exq, "default", SuccessWorker, [1], jid: jid)
+      ```
   """
-  @spec add(t, String.t()) :: {:ok, t} | {:error, term()}
-  def add(batch, jid) do
+  @spec add(t, String.t() | Keyword.t()) :: {:ok, t, binary} | {:error, term()}
+  def add(batch, jid) when is_binary(jid) do
     with :ok <- Internal.add(batch, jid) do
-      {:ok, batch}
+      {:ok, batch, jid}
+    end
+  end
+
+  def add(batch, job) when is_list(job) do
+    job = to_job(job)
+    with :ok <- Internal.add(batch, job) do
+      {:ok, batch, job.jid}
     end
   end
 
@@ -95,5 +113,23 @@ defmodule ExqBatch do
       prefix: prefix,
       ttl: ttl
     }
+  end
+
+  defp to_job(options) do
+    Keyword.put_new_lazy(options, :jid, fn -> UUID.uuid4() end)
+    |> Keyword.put_new_lazy(:retry, fn -> Utils.max_retries() end)
+    |> Keyword.update!(:args, fn args when is_list(args) ->
+      args
+    end)
+    |> Keyword.update!(:class, fn
+      worker when is_atom(worker) ->
+        "Elixir." <> worker = to_string(worker)
+        worker
+
+      worker when is_binary(worker) ->
+        worker
+    end)
+    |> Keyword.update!(:queue, fn queue -> to_string(queue) end)
+    |> Enum.into(%{})
   end
 end

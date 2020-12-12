@@ -27,7 +27,7 @@ local dead_jobs_count = redis.call('SCARD', batch_dead_jobs_key)
 
 if total_jobs_count == successful_jobs_count + dead_jobs_count then
    local callback_job = hgetall(batch_on_complete_key)
-   callback_job['retries'] = tonumber(callback_job['retries'])
+   callback_job['retry'] = tonumber(callback_job['retry'])
    callback_job['enqueued_at'] = callback_job_enqueued_at
    callback_job['args'] = cjson.decode(callback_job['args'])
 

@@ -13,6 +13,8 @@ defmodule ExqBatch.Internal do
   @jid_to_batch_id ":j"
 
   def init(batch) do
+    batch = update_in(batch.on_complete.args, &Jason.encode!(&1))
+
     on_complete_kvs =
       Enum.flat_map(batch.on_complete, fn {key, value} -> [to_string(key), to_string(value)] end)
 
@@ -49,7 +51,7 @@ defmodule ExqBatch.Internal do
     end
   end
 
-  def add(batch, jid) do
+  def add(batch, jid) when is_binary(jid) do
     commands = [
       ["MULTI"],
       ["SETEX", batch.prefix <> jid <> @jid_to_batch_id, batch.ttl, batch.id],
@@ -60,6 +62,32 @@ defmodule ExqBatch.Internal do
 
     case Redix.pipeline(batch.redis, commands) do
       {:ok, ["OK", "QUEUED", "QUEUED", "QUEUED", ["OK", _, 1]]} ->
+        :ok
+
+      {:ok, response} ->
+        {:error, response}
+
+      error ->
+        error
+    end
+  end
+
+  def add(batch, job) when is_map(job) do
+    namespace = Utils.namespace()
+    job = Map.put(job, :enqueued_at, Utils.unix_seconds())
+
+    commands = [
+      ["MULTI"],
+      ["SADD", Utils.queues_key(namespace), job.queue],
+      ["LPUSH", Utils.queue_key(namespace, job.queue), Jason.encode!(job)],
+      ["SETEX", batch.prefix <> job.jid <> @jid_to_batch_id, batch.ttl, batch.id],
+      ["SADD", batch.prefix <> batch.id <> @jobs, job.jid],
+      ["EXPIRE", batch.prefix <> batch.id <> @jobs, batch.ttl],
+      ["EXEC"]
+    ]
+
+    case Redix.pipeline(batch.redis, commands) do
+      {:ok, ["OK", "QUEUED", "QUEUED", "QUEUED", "QUEUED", "QUEUED", [_, _, "OK", _, 1]]} ->
         :ok
 
       {:ok, response} ->
