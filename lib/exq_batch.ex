@@ -77,6 +77,7 @@ defmodule ExqBatch do
 
   def add(batch, job) when is_list(job) do
     job = to_job(job)
+
     with :ok <- Internal.add(batch, job) do
       {:ok, batch, job.jid}
     end
