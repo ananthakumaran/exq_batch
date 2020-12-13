@@ -166,6 +166,18 @@ defmodule ExqBatchTest do
     refute_receive _, 1000
   end
 
+  test "empty batch", %{redix: redix} do
+    {:ok, batch} =
+      ExqBatch.new(on_complete: [queue: "default", class: CompletionWorker, args: ["complete"]])
+
+    {:ok, _batch} = ExqBatch.create(batch)
+
+    assert_receive {"complete", %{"succeeded" => [], "dead" => []}}, 1000
+
+    assert [] == Redix.command!(redix, ["KEYS", "exq_batch:*"])
+    refute_receive _, 1000
+  end
+
   def with_application_env(app, key, new, context) do
     old = Application.get_env(app, key)
     Application.put_env(app, key, new)
