@@ -10,7 +10,7 @@ defmodule ExqBatch do
   ## Telemetry
 
   The following telemetry events are published. `progress` event is
-  published on job completion (either dead or done). `done` is
+  published on each job completion (either dead or done). `done` is
   published when the batch is done (all the jobs are either dead or
   done).
 
@@ -33,7 +33,7 @@ defmodule ExqBatch do
   ### Metadata
 
   All the events include `id` attribute (batch id). `add` and
-  `progress` include `jid` attribute as well.
+  `progress` events include `jid` attribute as well.
   """
 
   defstruct [:id, :redis, :on_complete, :prefix, :ttl]

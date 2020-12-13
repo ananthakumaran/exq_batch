@@ -47,6 +47,6 @@ config :exq_batch,
   a group is either done or dead. A Resurrected job does not belong to
   the batch and will not lead to creation of completion job.
 
-* All the jobs in batch **must** be allowed to be complete (either
+* All the jobs in a batch **must** be allowed to be complete (either
   dead or done). Deleting any jobs while they are in retry queue will
   cause the batch to get stuck and will expire eventually.
