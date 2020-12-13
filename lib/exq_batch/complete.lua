@@ -44,7 +44,7 @@ local callback_job_enqueued_at, jid, status, ttl = ARGV[1], ARGV[2], ARGV[3], AR
 
 redis.call('DEL', jid_to_batch_id_key)
 if redis.call('SISMEMBER', batch_jobs_key, jid) == 0 then
-   return 0
+   return 2
 end
 
 if status == 'success' then
@@ -72,6 +72,7 @@ if total_jobs_count == successful_jobs_count + dead_jobs_count then
    redis.call('SADD', queues_key, on_complete['queue'])
    redis.call('LPUSH', callback_job_queue_key, callback_job)
    redis.call('DEL', batch_state_key, batch_on_complete_key, batch_jobs_key, batch_successful_jobs_key, batch_dead_jobs_key)
+   return 1
+else
+   return 0
 end
-
-return 0

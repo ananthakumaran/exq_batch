@@ -1,5 +1,6 @@
 defmodule ExqBatchTest do
   use ExUnit.Case, async: false
+  require Logger
 
   defmodule Backoff do
     @behaviour Exq.Backoff.Behaviour
@@ -27,6 +28,28 @@ defmodule ExqBatchTest do
       send(:runner, {id, status})
       :ok
     end
+  end
+
+  setup_all do
+    :ok =
+      :telemetry.attach_many(
+        "debug",
+        [
+          [:exq_batch, :batch, :new],
+          [:exq_batch, :batch, :add],
+          [:exq_batch, :batch, :create],
+          [:exq_batch, :batch, :progress],
+          [:exq_batch, :batch, :done]
+        ],
+        fn event, measurements, metadata, _ ->
+          Logger.info(
+            "#{inspect(event)} measurements: #{inspect(measurements)}, metadata: #{
+              inspect(metadata)
+            }"
+          )
+        end,
+        []
+      )
   end
 
   setup do

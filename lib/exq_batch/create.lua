@@ -54,8 +54,8 @@ if total_jobs_count == successful_jobs_count + dead_jobs_count then
    redis.call('LPUSH', callback_job_queue_key, callback_job)
 
    redis.call('DEL', batch_state_key, batch_on_complete_key, batch_jobs_key, batch_successful_jobs_key, batch_dead_jobs_key)
+   return 1
 else
    redis.call('SETEX', batch_state_key, ttl, 'created')
+   return 0
 end
-
-return 0

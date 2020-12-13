@@ -15,3 +15,6 @@ config :exq,
 
 config :exq_batch,
   ttl_in_seconds: 60 * 5
+
+config :logger,
+  level: :warn

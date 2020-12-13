@@ -13,6 +13,7 @@ defmodule ExqBatch.Internal do
   @jid_to_batch_id ":j"
 
   def init(batch) do
+    start = System.monotonic_time()
     {args, on_complete} = Map.pop(batch.on_complete, :args)
 
     on_complete_kvs = [
@@ -35,7 +36,8 @@ defmodule ExqBatch.Internal do
       ["EXEC"]
     ]
 
-    case Redix.pipeline(batch.redis, commands) do
+    case Redix.pipeline(batch.redis, commands)
+         |> emit_event(batch, :new, start) do
       {:ok,
        [
          "OK",
@@ -58,6 +60,8 @@ defmodule ExqBatch.Internal do
   end
 
   def add(batch, jid) when is_binary(jid) do
+    start = System.monotonic_time()
+
     commands = [
       ["MULTI"],
       ["SETEX", batch.prefix <> jid <> @jid_to_batch_id, batch.ttl, batch.id],
@@ -66,7 +70,8 @@ defmodule ExqBatch.Internal do
       ["EXEC"]
     ]
 
-    case Redix.pipeline(batch.redis, commands) do
+    case Redix.pipeline(batch.redis, commands)
+         |> emit_event(batch, :add, start, %{jid: jid}) do
       {:ok, ["OK", "QUEUED", "QUEUED", "QUEUED", ["OK", _, 1]]} ->
         :ok
 
@@ -79,6 +84,7 @@ defmodule ExqBatch.Internal do
   end
 
   def add(batch, job) when is_map(job) do
+    start = System.monotonic_time()
     namespace = Utils.namespace()
     job = Map.put(job, :enqueued_at, Utils.unix_seconds())
 
@@ -92,7 +98,8 @@ defmodule ExqBatch.Internal do
       ["EXEC"]
     ]
 
-    case Redix.pipeline(batch.redis, commands) do
+    case Redix.pipeline(batch.redis, commands)
+         |> emit_event(batch, :add, start, %{jid: job.jid}) do
       {:ok, ["OK", "QUEUED", "QUEUED", "QUEUED", "QUEUED", "QUEUED", [_, _, "OK", _, 1]]} ->
         :ok
 
@@ -107,6 +114,7 @@ defmodule ExqBatch.Internal do
   Script.compile(:create)
 
   def create(batch) do
+    start = System.monotonic_time()
     namespace = Utils.namespace()
 
     keys = [
@@ -124,7 +132,16 @@ defmodule ExqBatch.Internal do
       batch.ttl
     ]
 
-    Script.eval(batch.redis, @create, keys, args)
+    {:ok, code} = Script.eval(batch.redis, @create, keys, args)
+
+    case code do
+      0 ->
+        emit_event(:ok, batch, :create, start)
+
+      1 ->
+        emit_event(:ok, batch, :create, start)
+        emit_event(:ok, batch, :done, start)
+    end
   end
 
   def after_success(redis, jid) do
@@ -152,6 +169,7 @@ defmodule ExqBatch.Internal do
   Script.compile(:complete)
 
   defp complete(batch, jid, status) do
+    start = System.monotonic_time()
     namespace = Utils.namespace()
 
     queue =
@@ -175,8 +193,19 @@ defmodule ExqBatch.Internal do
       batch.ttl
     ]
 
-    {:ok, 0} = Script.eval(batch.redis, @complete, keys, args)
-    :ok
+    {:ok, code} = Script.eval(batch.redis, @complete, keys, args)
+
+    case code do
+      0 ->
+        emit_event(:ok, batch, :progress, start, %{jid: jid})
+
+      1 ->
+        emit_event(:ok, batch, :progress, start, %{jid: jid})
+        emit_event(:ok, batch, :done, start)
+
+      2 ->
+        :ok
+    end
   end
 
   defp find_batch_by_jid(redis, jid) do
@@ -186,5 +215,19 @@ defmodule ExqBatch.Internal do
     if is_binary(batch_id) do
       ExqBatch.from_id(batch_id)
     end
+  end
+
+  defp emit_event(result, batch, event_name, start, metadata \\ %{}) do
+    duration = System.monotonic_time() - start
+
+    :telemetry.execute(
+      [:exq_batch, :batch, event_name],
+      %{duration: duration},
+      Map.merge(metadata, %{
+        id: batch.id
+      })
+    )
+
+    result
   end
 end

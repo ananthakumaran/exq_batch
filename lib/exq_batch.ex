@@ -6,6 +6,34 @@ defmodule ExqBatch do
   ExqBatch provides a building block to create complex workflows using
   Exq jobs. A batch monitors a group of Exq jobs and creates callback
   job when all the jobs are processed.
+
+  ## Telemetry
+
+  The following telemetry events are published. `progress` event is
+  published on job completion (either dead or done). `done` is
+  published when the batch is done (all the jobs are either dead or
+  done).
+
+  ```
+  [
+    [:exq_batch, :batch, :new],
+    [:exq_batch, :batch, :add],
+    [:exq_batch, :batch, :create],
+    [:exq_batch, :batch, :progress],
+    [:exq_batch, :batch, :done]
+  ]
+  ```
+
+  ### Measurements
+
+  All the events include `duration` in native time unit. Note that
+  duration here measures the time taken for ExqBatch to complete the
+  operation.
+
+  ### Metadata
+
+  All the events include `id` attribute (batch id). `add` and
+  `progress` include `jid` attribute as well.
   """
 
   defstruct [:id, :redis, :on_complete, :prefix, :ttl]
@@ -90,7 +118,7 @@ defmodule ExqBatch do
   """
   @spec create(t) :: {:ok, t} | {:error, term()}
   def create(batch) do
-    with {:ok, _} <- Internal.create(batch) do
+    with :ok <- Internal.create(batch) do
       {:ok, batch}
     end
   end
