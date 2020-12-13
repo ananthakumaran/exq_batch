@@ -1,5 +1,7 @@
 # ExqBatch
 
+[![Hex.pm](https://img.shields.io/hexpm/v/exq_batch.svg)](https://hex.pm/packages/exq_batch)
+
 ExqBatch provides a building block to create complex workflows using
 Exq jobs. A batch monitors a group of Exq jobs and creates callback
 job when all the jobs are processed.
@@ -12,6 +14,9 @@ job when all the jobs are processed.
 {:ok, batch, jid} = ExqBatch.add(batch, queue: "default", class: Worker, args: [2])
 {:ok, _batch} = ExqBatch.create(batch)
 ```
+
+Checkout [documentation](https://hexdocs.pm/exq_batch/ExqBatch.html)
+for more information.
 
 ## Config
 
