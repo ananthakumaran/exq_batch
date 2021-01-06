@@ -37,8 +37,15 @@ life cycle.
 
 ```elixir
 config :exq_batch,
+  # TTL of a batch job. Under normal condition, batch will get deleted
+  # on completion. If a batch failed to complete for any reason, it
+  # will get deleted after TTL seconds
   ttl_in_seconds: 60 * 60 * 24 * 30,
-  prefix: "exq_batch"
+  # All the data related to batch will be stored under the prefix in redis
+  prefix: "exq_batch",
+  # Optional. If present, batch middleware will be enabled only for
+  # the given queues. If not present, will be enabled for all queues.
+  queues: ["default"]
 ```
 
 ## Caveats

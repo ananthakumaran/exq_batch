@@ -14,16 +14,29 @@ defmodule ExqBatch.Middleware do
   end
 
   def after_processed_work(%Pipeline{assigns: assigns} = pipeline) do
-    :ok = Internal.after_success(assigns.redis, assigns.job.jid)
+    if enabled?(assigns.job.queue) do
+      :ok = Internal.after_success(assigns.redis, assigns.job.jid)
+    end
+
     pipeline
   end
 
   def after_failed_work(%Pipeline{assigns: assigns} = pipeline) do
-    if dead?(assigns.job) do
+    if enabled?(assigns.job.queue) && dead?(assigns.job) do
       :ok = Internal.after_dead(assigns.redis, assigns.job.jid)
     end
 
     pipeline
+  end
+
+  defp enabled?(queue) do
+    queues = Application.get_env(:exq_batch, :queues)
+
+    if is_list(queues) do
+      Enum.member?(queues, queue)
+    else
+      true
+    end
   end
 
   defp dead?(%{retry: retry} = job)

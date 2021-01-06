@@ -167,6 +167,26 @@ defmodule ExqBatchTest do
     end)
   end
 
+  test "config :queues" do
+    with_application_env(:exq_batch, :queues, ["default"], fn ->
+      {:ok, batch} =
+        ExqBatch.new(on_complete: [queue: "default", class: CompletionWorker, args: ["complete"]])
+
+      {:ok, batch, _jid} = ExqBatch.add(batch, queue: "default", class: SuccessWorker, args: [1])
+      {:ok, _batch} = ExqBatch.create(batch)
+      assert_receive 1, 1000
+      assert_receive {"complete", _}, 1000
+
+      {:ok, batch} =
+        ExqBatch.new(on_complete: [queue: "low", class: CompletionWorker, args: ["complete"]])
+
+      {:ok, batch, _jid} = ExqBatch.add(batch, queue: "low", class: SuccessWorker, args: [1])
+      {:ok, _batch} = ExqBatch.create(batch)
+      assert_receive 1, 1000
+      refute_receive {"complete", _}, 1000
+    end)
+  end
+
   test "encodes args correctly", %{redix: redix} do
     {:ok, batch} =
       ExqBatch.new(
