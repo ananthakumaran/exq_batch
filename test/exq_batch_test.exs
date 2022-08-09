@@ -43,9 +43,7 @@ defmodule ExqBatchTest do
         ],
         fn event, measurements, metadata, _ ->
           Logger.info(
-            "#{inspect(event)} measurements: #{inspect(measurements)}, metadata: #{
-              inspect(metadata)
-            }"
+            "#{inspect(event)} measurements: #{inspect(measurements)}, metadata: #{inspect(metadata)}"
           )
         end,
         []
