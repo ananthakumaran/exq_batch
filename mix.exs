@@ -5,7 +5,7 @@ defmodule ExqBatch.MixProject do
     [
       app: :exq_batch,
       version: "0.1.1",
-      elixir: "~> 1.8",
+      elixir: "~> 1.9",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       description: "Monitors group of Exq jobs",
@@ -34,7 +34,7 @@ defmodule ExqBatch.MixProject do
       {:exq, "~> 0.14"},
       {:elixir_uuid, "~> 1.2"},
       {:redix, ">= 0.9.0"},
-      {:telemetry, "~> 0.4"},
+      {:telemetry, "~> 0.4 or ~> 1.0"},
       {:jason, "~> 1.0"},
       {:dialyxir, "~> 1.0", only: :dev, runtime: false},
       {:ex_doc, "~> 0.22.0", only: :dev, runtime: false}
