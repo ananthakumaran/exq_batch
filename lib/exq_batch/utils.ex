@@ -17,10 +17,14 @@ defmodule ExqBatch.Utils do
     namespace <> ":queue:" <> queue
   end
 
+  def unix_seconds_string do
+    unix_seconds()
+    |> Float.to_string()
+  end
+
   def unix_seconds do
     DateTime.utc_now()
     |> DateTime.to_unix(:microsecond)
     |> Kernel./(1_000_000.0)
-    |> Float.to_string()
   end
 end

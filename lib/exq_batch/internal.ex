@@ -128,7 +128,7 @@ defmodule ExqBatch.Internal do
     ]
 
     args = [
-      Utils.unix_seconds(),
+      Utils.unix_seconds_string(),
       batch.ttl
     ]
 
@@ -187,7 +187,7 @@ defmodule ExqBatch.Internal do
     ]
 
     args = [
-      Utils.unix_seconds(),
+      Utils.unix_seconds_string(),
       jid,
       status,
       batch.ttl
